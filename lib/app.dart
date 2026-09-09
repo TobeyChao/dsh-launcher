@@ -45,6 +45,11 @@ class _LauncherAppState extends State<LauncherApp> with WindowListener {
     // 拦截系统退出请求:先停子进程再退出,避免孤儿进程。
     _lifecycleListener = AppLifecycleListener(
       onExitRequested: () async {
+        // 托盘常驻:关闭/退出请求应隐藏到托盘,绝不能停服务。
+        if (widget.settings.trayResident) {
+          await _hideToTray();
+          return AppExitResponse.cancel;
+        }
         await _web.stop();
         return AppExitResponse.exit;
       },
@@ -71,16 +76,20 @@ class _LauncherAppState extends State<LauncherApp> with WindowListener {
     exit(0);
   }
 
+  /// 托盘常驻:隐藏窗口并从任务栏消失(服务不中断)。
+  Future<void> _hideToTray() async {
+    await windowManager.hide();
+    try {
+      await windowManager.setSkipTaskbar(true);
+    } catch (_) {
+      // 个别平台不支持跳过任务栏时忽略。
+    }
+  }
+
   @override
   void onWindowClose() async {
     if (widget.settings.trayResident) {
-      // 托盘常驻:隐藏窗口并从任务栏消失(服务不中断)。
-      await windowManager.hide();
-      try {
-        await windowManager.setSkipTaskbar(true);
-      } catch (_) {
-        // 个别平台不支持跳过任务栏时忽略。
-      }
+      await _hideToTray();
       return;
     }
     // 退出:3 秒兜底强退,避免任何残留。
