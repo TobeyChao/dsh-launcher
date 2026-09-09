@@ -83,7 +83,7 @@ class _LauncherScreenState extends State<LauncherScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const SizedBox(height: 44),
+          const SizedBox(height: 24),
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 16),
             child: Row(
@@ -101,7 +101,7 @@ class _LauncherScreenState extends State<LauncherScreen> {
               ],
             ),
           ),
-          const SizedBox(height: 22),
+          const SizedBox(height: 12),
           DshNavItem(
             icon: Icons.power_settings_new,
             label: '概览',

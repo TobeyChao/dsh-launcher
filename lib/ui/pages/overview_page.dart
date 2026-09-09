@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -125,18 +126,19 @@ class _OverviewPageState extends State<OverviewPage> {
 
   Widget _buildHero() {
     final s = dshStatusPresentation(_status, widget.web.failureReason);
-    final active = _status == WebStatus.running ||
-        _status == WebStatus.starting ||
-        _status == WebStatus.externalRunning;
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: dshSurface,
-        borderRadius: BorderRadius.circular(8),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [dshSurface, Color(0xFFF4F7FF)],
+        ),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: dshBorder),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x0A1B241F),
+            color: Color(0x101B241F),
             blurRadius: 28,
             offset: Offset(0, 8),
           ),
@@ -144,7 +146,17 @@ class _OverviewPageState extends State<OverviewPage> {
       ),
       child: Row(
         children: [
-          _buildToggle(active),
+          _ToggleButton(
+            status: _status,
+            locked: widget.web.upgradeLocked,
+            onTap: widget.web.upgradeLocked || _status == WebStatus.starting
+                ? null
+                : (_status == WebStatus.running
+                    ? widget.web.stop
+                    : (_status == WebStatus.externalRunning
+                        ? _openUi
+                        : widget.web.start)),
+          ),
           const SizedBox(width: 24),
           Expanded(
             child: Column(
@@ -199,65 +211,6 @@ class _OverviewPageState extends State<OverviewPage> {
     );
   }
 
-  Widget _buildToggle(bool active) {
-    final starting = _status == WebStatus.starting;
-    final locked = widget.web.upgradeLocked;
-    return GestureDetector(
-      onTap: starting || locked
-          ? null
-          : (_status == WebStatus.running
-              ? widget.web.stop
-              : (_status == WebStatus.externalRunning ? _openUi : widget.web.start)),
-      child: Container(
-        width: 104,
-        height: 104,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          border: Border.all(
-            color: active ? dshAccent : dshBorderStrong,
-            width: 2,
-          ),
-          gradient: active
-              ? const LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [Color(0xFF3B5BE0), dshPrimary],
-                )
-              : null,
-          color: active ? null : dshSurface,
-          boxShadow: active
-              ? const [
-                  BoxShadow(
-                    color: Color(0x593B5BE0),
-                    blurRadius: 30,
-                    offset: Offset(0, 10),
-                  ),
-                ]
-              : null,
-        ),
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            if (starting)
-              const SizedBox(
-                width: 104,
-                height: 104,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2.5,
-                  color: Color(0x8CE3EAFF),
-                ),
-              ),
-            Icon(
-              Icons.power_settings_new,
-              size: 42,
-              color: active ? Colors.white : dshInk3,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildAddr(String hint) {
     final running = _status == WebStatus.running ||
         _status == WebStatus.externalRunning;
@@ -269,17 +222,27 @@ class _OverviewPageState extends State<OverviewPage> {
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
           decoration: BoxDecoration(
             color: running ? dshAccentSofter : dshSurface2,
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(10),
             border: Border.all(color: running ? dshAccent : dshBorder),
           ),
-          child: Text(
-            widget.web.openUrl,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: dshMono.copyWith(
-              fontSize: 13,
-              color: running ? dshAccentHover : dshInk2,
-            ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  widget.web.openUrl,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: dshMono.copyWith(
+                    fontSize: 13,
+                    color: running ? dshAccentHover : dshInk2,
+                  ),
+                ),
+              ),
+              if (running) ...[
+                const SizedBox(width: 6),
+                Icon(Icons.copy_rounded, size: 13, color: dshAccent),
+              ],
+            ],
           ),
         ),
       ),
@@ -316,7 +279,7 @@ class _OverviewPageState extends State<OverviewPage> {
       children: [
         Expanded(
           child: SizedBox(
-            height: 118,
+            height: 122,
             child: DshStatCard(
               number: version,
               label: 'dsh 版本',
@@ -328,7 +291,7 @@ class _OverviewPageState extends State<OverviewPage> {
         const SizedBox(width: 12),
         Expanded(
           child: SizedBox(
-            height: 118,
+            height: 122,
             child: DshStatCard(
               number: _formatUptime(_uptime),
               label: '运行时长',
@@ -340,7 +303,7 @@ class _OverviewPageState extends State<OverviewPage> {
         const SizedBox(width: 12),
         Expanded(
           child: SizedBox(
-            height: 118,
+            height: 122,
             child: _buildUpdateCard(),
           ),
         ),
@@ -405,4 +368,233 @@ class _OverviewPageState extends State<OverviewPage> {
       ],
     );
   }
+}
+
+/// 概览页大圆形启停按钮:按状态区分造型;运行中带旋转辉光环;不缩放。
+class _ToggleButton extends StatefulWidget {
+  const _ToggleButton({
+    required this.status,
+    required this.locked,
+    required this.onTap,
+  });
+
+  final WebStatus status;
+  final bool locked;
+  final VoidCallback? onTap;
+
+  @override
+  State<_ToggleButton> createState() => _ToggleButtonState();
+}
+
+class _ToggleButtonState extends State<_ToggleButton>
+    with SingleTickerProviderStateMixin {
+  bool _hovered = false;
+  bool _pressed = false;
+  late final AnimationController _spin;
+
+  bool get _starting => widget.status == WebStatus.starting;
+  bool get _enabled => !_starting && !widget.locked;
+  bool get _active =>
+      widget.status == WebStatus.running ||
+      widget.status == WebStatus.externalRunning ||
+      _starting;
+  bool get _failed => widget.status == WebStatus.failed;
+  bool get _external => widget.status == WebStatus.externalRunning;
+  bool get _showRing => _active && !_starting;
+
+  static Color _lighten(Color c, double t) => Color.lerp(c, Colors.white, t)!;
+  static Color _darken(Color c, double t) => Color.lerp(c, Colors.black, t)!;
+
+  @override
+  void initState() {
+    super.initState();
+    _spin = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1600),
+    );
+    _syncSpin();
+  }
+
+  @override
+  void didUpdateWidget(covariant _ToggleButton oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _syncSpin();
+  }
+
+  @override
+  void dispose() {
+    _spin.dispose();
+    super.dispose();
+  }
+
+  void _syncSpin() {
+    if (_showRing && !_spin.isAnimating) {
+      _spin.repeat();
+    } else if (!_showRing && _spin.isAnimating) {
+      _spin.stop();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: _enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
+      onEnter: _enabled ? (_) => setState(() => _hovered = true) : null,
+      onExit: _enabled ? (_) => setState(() => _hovered = false) : null,
+      child: GestureDetector(
+        onTapDown: _enabled ? (_) => setState(() => _pressed = true) : null,
+        onTapUp: _enabled ? (_) => setState(() => _pressed = false) : null,
+        onTapCancel: _enabled ? () => setState(() => _pressed = false) : null,
+        onTap: widget.onTap,
+        child: SizedBox(
+          width: 104,
+          height: 104,
+          child: Stack(
+            alignment: Alignment.center,
+            clipBehavior: Clip.none,
+            children: [
+              if (_showRing)
+                Positioned(
+                  left: -6,
+                  top: -6,
+                  child: SizedBox(
+                    width: 116,
+                    height: 116,
+                    child: AnimatedBuilder(
+                      animation: _spin,
+                      builder: (_, _) => CustomPaint(
+                        painter: _GlowRingPainter(
+                          progress: _spin.value,
+                          color: _external ? const Color(0xFF2FA37C) : dshAccent,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                curve: Curves.easeOut,
+                width: 104,
+                height: 104,
+                decoration: _decoration(),
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    if (_starting)
+                      const SizedBox(
+                        width: 104,
+                        height: 104,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.5,
+                          color: Color(0x8CE3EAFF),
+                        ),
+                      ),
+                    Icon(_icon, size: 42, color: _iconColor),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  IconData get _icon => _external ? Icons.open_in_new : Icons.power_settings_new;
+
+  Color get _iconColor {
+    if (_active) return Colors.white;
+    if (_failed) return dshDanger;
+    return dshInk3;
+  }
+
+  BoxDecoration _decoration() {
+    if (_active) {
+      final glowColor =
+          _external ? const Color(0x552FA37C) : const Color(0x593B5BE0);
+      return BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: _gradientColors(),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: glowColor,
+            blurRadius: _hovered ? 42 : 30,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      );
+    }
+    // 非激活(已停止 / 启动失败):只做亮度变化(hover 变亮、press 变暗),不改变色相。
+    final Color fill;
+    final Color border;
+    if (_failed) {
+      fill = _hovered
+          ? _lighten(dshDangerSoft, 0.10)
+          : (_pressed ? _darken(dshDangerSoft, 0.06) : dshDangerSoft);
+      border = _pressed
+          ? _darken(dshDanger, 0.12)
+          : (_hovered ? _lighten(dshDanger, 0.08) : dshDanger);
+    } else {
+      fill = _pressed ? _darken(dshSurface, 0.035) : dshSurface;
+      border = _pressed
+          ? _darken(dshBorderStrong, 0.10)
+          : (_hovered ? _lighten(dshBorderStrong, 0.10) : dshBorderStrong);
+    }
+    return BoxDecoration(
+      shape: BoxShape.circle,
+      color: fill,
+      border: Border.all(color: border, width: 2.5),
+    );
+  }
+
+  List<Color> _gradientColors() {
+    final baseA = _external ? const Color(0xFF2FA37C) : const Color(0xFF3B5BE0);
+    final baseB = _external ? const Color(0xFF1F7A5C) : dshPrimary;
+    if (_pressed) return [_darken(baseA, 0.12), _darken(baseB, 0.12)];
+    if (_hovered) return [_lighten(baseA, 0.06), _lighten(baseB, 0.04)];
+    return [baseA, baseB];
+  }
+}
+
+/// 围绕按钮旋转的辉光短弧(运行 / 外部运行态)。
+class _GlowRingPainter extends CustomPainter {
+  _GlowRingPainter({required this.progress, required this.color});
+
+  final double progress;
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = size.center(Offset.zero);
+    final radius = size.width / 2 - 2;
+    final rect = Rect.fromCircle(center: center, radius: radius);
+    canvas.save();
+    canvas.translate(center.dx, center.dy);
+    canvas.rotate(progress * 2 * math.pi);
+    canvas.translate(-center.dx, -center.dy);
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3
+      ..strokeCap = StrokeCap.round
+      ..shader = SweepGradient(
+        startAngle: 0,
+        endAngle: 2 * math.pi,
+        colors: [
+          color.withValues(alpha: 0),
+          color.withValues(alpha: 0.9),
+          color.withValues(alpha: 0),
+        ],
+        stops: const [0.0, 0.12, 0.25],
+      ).createShader(rect);
+    canvas.drawCircle(center, radius, paint);
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant _GlowRingPainter old) =>
+      old.progress != progress || old.color != color;
 }

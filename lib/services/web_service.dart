@@ -43,6 +43,7 @@ class WebService extends ChangeNotifier {
   Timer? _readyProbe;
 
   static final RegExp _ansiRe = RegExp(r'\x1B\[[0-9;]*[A-Za-z]');
+  static final RegExp _cmdEchoRe = RegExp(r'^\$\s');
   static const String _readyLinePrefix = 'dsh web:';
 
   DateTime? get startedAt => _startedAt;
@@ -77,6 +78,102 @@ class WebService extends ChangeNotifier {
       }
     }
     return null;
+  }
+
+  /// 解析 dsh 主目录:优先 `$DSH_HOME`,否则 `~/.dsh`,与 `@deepseek-ai/dsh-home-paths`
+  /// 的优先级一致;无法解析返回 null。仅用于定位残留写锁所在目录,不读取数据。
+  @visibleForTesting
+  static String? resolveDshHome({Map<String, String>? env}) {
+    final e = env ?? Platform.environment;
+    final configured = e['DSH_HOME'];
+    if (configured != null && configured.trim().isNotEmpty) {
+      return _expandDshHome(configured.trim(), e);
+    }
+    final home = e['USERPROFILE'] ?? e['HOME'];
+    if (home == null || home.isEmpty) return null;
+    return '$home${Platform.pathSeparator}.dsh';
+  }
+
+  /// 展开 `~`/`~/`/`~\` 前缀(与 dsh-home-paths 的 expandHomePath 对齐)。
+  static String _expandDshHome(String path, Map<String, String> env) {
+    final home = env['USERPROFILE'] ?? env['HOME'];
+    if (path == '~') return home ?? path;
+    if (path.startsWith('~/') || path.startsWith('~\\')) {
+      if (home == null || home.isEmpty) return path;
+      return '$home${Platform.pathSeparator}${path.substring(2)}';
+    }
+    return path;
+  }
+
+  /// 清理 dsh home 根目录下已无持有者的 atomic-write 写锁(`*.lock`),返回清理数。
+  ///
+  /// dsh 的 `withFileLock` 有意不回收既有锁(注释:孤儿恢复是操作员动作),但本启动器
+  /// 用 `taskkill /F` 强杀进程树;若恰逢 dsh 处于取锁窗口(已用 `wx` 建空 `.lock` 未写 PID)
+  /// 或取锁后被强杀,会遗留空锁或死 PID 锁,导致下一次 boot 在写锁上等待超时、整树加载失败。
+  /// 这里只删「确实无持有者」的锁:
+  /// - 空 `.lock` 且已存续超过 [emptyLockGrace](活进程创建后立即写 PID,空文件只可能是被杀瞬间
+  ///   遗留;宽限期避免与「刚创建尚未写入」的活锁竞态);
+  /// - 内容为单个数字 PID 且该进程已退出。
+  /// 含活 PID 的锁(如本机其他端口的 dsh 实例)一律保留。
+  /// [pidAlive] 为进程存活探测(测试注入);默认按平台探测。
+  @visibleForTesting
+  static Future<int> cleanStaleDshLocks(
+    Directory root, {
+    Duration emptyLockGrace = const Duration(seconds: 5),
+    Future<bool> Function(int pid)? pidAlive,
+  }) async {
+    if (!await root.exists()) return 0;
+    var removed = 0;
+    await for (final entity in root.list(followLinks: false)) {
+      if (entity is! File || !entity.path.endsWith('.lock')) continue;
+      if (await _isOrphanedLock(entity, emptyLockGrace, pidAlive)) {
+        try {
+          await entity.delete();
+          removed++;
+        } catch (_) {
+          // 已被并发移除等,忽略。
+        }
+      }
+    }
+    return removed;
+  }
+
+  static Future<bool> _isOrphanedLock(
+    File lock,
+    Duration emptyLockGrace,
+    Future<bool> Function(int pid)? pidAlive,
+  ) async {
+    try {
+      final content = (await lock.readAsString()).trim();
+      if (content.isEmpty) {
+        final age = DateTime.now().difference((await lock.stat()).modified);
+        return age > emptyLockGrace;
+      }
+      final pid = int.tryParse(content);
+      if (pid == null) return false; // 非 atomic-write 锁(如 yarn.lock)
+      final alive = pidAlive != null ? await pidAlive(pid) : await _pidAlive(pid);
+      return !alive;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// 平台进程存活探测;无法确认时保守视为存活,避免误删活锁。
+  static Future<bool> _pidAlive(int pid) async {
+    try {
+      if (Platform.isWindows) {
+        final result = await Process.run(
+          'tasklist',
+          ['/FI', 'PID eq $pid', '/FO', 'CSV', '/NH'],
+        );
+        // 命中时输出含 `,"pid",` 字段;无匹配时是 INFO:... 不含该字段。
+        return result.exitCode == 0 && result.stdout.toString().contains(',"$pid",');
+      }
+      final result = await Process.run('kill', ['-0', '$pid']);
+      return result.exitCode == 0;
+    } catch (_) {
+      return true;
+    }
   }
 
   /// 启动命令构造:``pnpm dsh web --port <port>``(dsh 默认自行打开浏览器;
@@ -121,6 +218,24 @@ class WebService extends ChangeNotifier {
   @visibleForTesting
   static String stripAnsi(String input) => input.replaceAll(_ansiRe, '');
 
+  /// 判定一行子进程输出的日志级别。
+  ///
+  /// - 命令回显行(以 `$ ` 开头,如 pnpm 回显的 `$ node ...`)一律视为 info,即使走 stderr:
+  ///   命令回显只是「将要执行什么」,不是错误;
+  /// - 其余:来自 stderr,或含 error/exception/traceback 关键字 → error;
+  /// - 其余 → info。
+  @visibleForTesting
+  static LogLevel classifyLine(String line, {required bool stderr}) {
+    if (_cmdEchoRe.hasMatch(line)) return LogLevel.info;
+    final lower = line.toLowerCase();
+    return stderr ||
+            lower.contains('error') ||
+            lower.contains('exception') ||
+            lower.contains('traceback')
+        ? LogLevel.error
+        : LogLevel.info;
+  }
+
   Future<void> start() async {
     if (_webProcess != null || status == WebStatus.starting) return;
     if (_upgradeLocked) return;
@@ -149,6 +264,7 @@ class WebService extends ChangeNotifier {
 
     _setStatus(WebStatus.starting);
     _append(LogLevel.info, '启动 Web 服务…', LogSource.sys);
+    await _cleanStaleDshLocks();
     final pnpm = resolvePnpm();
     if (pnpm == null) {
       _fail('未在 PATH 中找到 pnpm,请安装 pnpm 后重试');
@@ -203,6 +319,22 @@ class WebService extends ChangeNotifier {
     return env;
   }
 
+  /// 启动前回收 dsh home 的孤儿写锁,防止上次强杀遗留的 `.lock` 阻塞本次 boot。
+  Future<void> _cleanStaleDshLocks() async {
+    final home = resolveDshHome();
+    if (home == null) return;
+    final root = Directory(home);
+    if (!await root.exists()) return;
+    final removed = await cleanStaleDshLocks(root);
+    if (removed > 0) {
+      _append(
+        LogLevel.warn,
+        '已清理 $removed 个 dsh 残留写锁(上次进程强杀遗留),避免本次启动被写锁阻塞',
+        LogSource.sys,
+      );
+    }
+  }
+
   void _pipeStream(Stream<List<int>> stream, LogSource source, {bool stderr = false}) {
     stream
         .transform(utf8.decoder)
@@ -237,14 +369,7 @@ class WebService extends ChangeNotifier {
   void _onOutput(String line, LogSource source, {bool stderr = false}) {
     final text = stripAnsi(line.trim());
     if (text.isEmpty) return;
-    final lower = text.toLowerCase();
-    final level = stderr ||
-            lower.contains('error') ||
-            lower.contains('exception') ||
-            lower.contains('traceback')
-        ? LogLevel.error
-        : LogLevel.info;
-    _append(level, text, source);
+    _append(classifyLine(text, stderr: stderr), text, source);
 
     final url = parseReadyUrl(text);
     if (url != null && source == LogSource.web) {

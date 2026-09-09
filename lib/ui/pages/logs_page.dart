@@ -87,8 +87,15 @@ class _LogsPageState extends State<LogsPage> {
                       const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                   decoration: BoxDecoration(
                     color: dshLogBg,
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: dshLogBorder),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x22121A16),
+                        blurRadius: 14,
+                        offset: Offset(0, 6),
+                      ),
+                    ],
                   ),
                   child: logs.isEmpty
                       ? const Center(

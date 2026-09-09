@@ -102,12 +102,11 @@ class _SettingsPageState extends State<SettingsPage> {
           const Text('设置', style: dshPageTitleStyle),
           const SizedBox(height: 12),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _buildSettingsCard(),
-                const Spacer(),
-              ],
+            child: SingleChildScrollView(
+              child: SizedBox(
+                width: double.infinity,
+                child: _buildSettingsCard(),
+              ),
             ),
           ),
           const SizedBox(height: 8),
@@ -146,8 +145,15 @@ class _SettingsPageState extends State<SettingsPage> {
     return Container(
       decoration: BoxDecoration(
         color: dshSurface,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: dshBorder),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0A1B241F),
+            blurRadius: 20,
+            offset: Offset(0, 6),
+          ),
+        ],
       ),
       child: Column(
         children: [

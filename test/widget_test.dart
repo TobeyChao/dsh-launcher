@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:dsh_launcher/models/log_entry.dart';
 import 'package:dsh_launcher/services/auto_launch.dart';
 import 'package:dsh_launcher/services/settings_store.dart';
 import 'package:dsh_launcher/services/upgrade_service.dart';
@@ -37,6 +38,31 @@ void main() {
       expect(WebService.stripAnsi('\u001B[32m绿色\u001B[0m'), '绿色');
       expect(WebService.stripAnsi('\u001B[1;34m[B\u001B[m'), '[B');
       expect(WebService.stripAnsi('plain'), 'plain');
+    });
+
+    test('classifyLine 命令回显不判为 error', () {
+      // pnpm 把将要执行的命令回显到 stderr,属于信息而非错误。
+      expect(
+        WebService.classifyLine(
+          r'$ node --import tsx/esm apps/cli/src/bin.ts "web" "--port" "3080"',
+          stderr: true,
+        ),
+        LogLevel.info,
+      );
+      expect(WebService.classifyLine(r'$ pnpm run build', stderr: true), LogLevel.info);
+      expect(WebService.classifyLine(r'$ node app.js', stderr: false), LogLevel.info);
+    });
+
+    test('classifyLine stderr 与关键字判为 error', () {
+      expect(WebService.classifyLine('throw new Error("boom")', stderr: true), LogLevel.error);
+      expect(WebService.classifyLine('Error: plugin tree failed', stderr: false), LogLevel.error);
+      expect(WebService.classifyLine('Uncaught Exception', stderr: false), LogLevel.error);
+      expect(WebService.classifyLine('at boot (index.ts:832)', stderr: true), LogLevel.error);
+    });
+
+    test('classifyLine 普通输出判为 info', () {
+      expect(WebService.classifyLine('dsh web: http://127.0.0.1:3080/?token=abc', stderr: false), LogLevel.info);
+      expect(WebService.classifyLine('opening the default browser', stderr: false), LogLevel.info);
     });
 
     test('parseReadyUrl 解析 token URL', () {

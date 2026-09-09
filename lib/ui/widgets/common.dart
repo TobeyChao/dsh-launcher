@@ -10,7 +10,12 @@ const TextStyle dshMono = TextStyle(
   fontFamilyFallback: ['Consolas', 'Menlo', 'SF Mono'],
 );
 
-const TextStyle dshPageTitleStyle = TextStyle(fontSize: 14, fontWeight: FontWeight.w600);
+const TextStyle dshPageTitleStyle = TextStyle(
+  fontSize: 16,
+  fontWeight: FontWeight.w700,
+  letterSpacing: 0.2,
+  color: dshInk,
+);
 
 /// 服务状态的展示信息(唯一 switch 来源,侧栏与概览页共用)。
 ({Color dot, String title, String sub, String hint}) dshStatusPresentation(
@@ -93,25 +98,40 @@ InputDecoration dshInputDecoration() {
 
 /// 品牌标志(深蓝圆角方块 + DS 字标)。
 class DshBrandMark extends StatelessWidget {
-  const DshBrandMark({super.key});
+  const DshBrandMark({super.key, this.size = 24});
+
+  final double size;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 22,
-      height: 22,
+      width: size,
+      height: size,
       decoration: BoxDecoration(
-        color: dshPrimary,
-        borderRadius: BorderRadius.circular(5),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF4A6BE8), dshPrimary],
+        ),
+        borderRadius: BorderRadius.circular(size * 0.28),
+        border: Border.all(color: Color(0x2EFFFFFF), width: 0.5),
+        boxShadow: [
+          BoxShadow(
+            color: dshPrimary.withValues(alpha: 0.3),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       alignment: Alignment.center,
-      child: const Text(
+      child: Text(
         'DS',
         style: TextStyle(
           fontFamily: 'Cascadia Mono',
           color: Colors.white,
-          fontSize: 10,
+          fontSize: size * 0.46,
           fontWeight: FontWeight.w700,
+          letterSpacing: 0.5,
         ),
       ),
     );
@@ -139,17 +159,28 @@ class DshNavItem extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
       child: Material(
         color: selected ? dshAccentSofter : Colors.transparent,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(9),
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(9),
           child: Container(
-            height: 36,
+            height: 38,
             padding: const EdgeInsets.symmetric(horizontal: 12),
             child: Row(
               children: [
-                Icon(icon, size: 16, color: selected ? dshPrimary : dshInk3),
-                const SizedBox(width: 10),
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 160),
+                  curve: Curves.easeOut,
+                  width: 3,
+                  height: 16,
+                  margin: const EdgeInsets.only(right: 8),
+                  decoration: BoxDecoration(
+                    color: selected ? dshAccent : Colors.transparent,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                Icon(icon, size: 17, color: selected ? dshPrimary : dshInk3),
+                const SizedBox(width: 9),
                 Text(
                   label,
                   style: TextStyle(
@@ -242,7 +273,7 @@ class DshSettingRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: const BoxDecoration(
         border: Border(top: BorderSide(color: dshBorder)),
       ),
@@ -282,13 +313,20 @@ class DshStatCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(12),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
           color: highlighted ? dshAccentSofter : dshSurface,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(12),
           border: Border.all(color: highlighted ? dshAccent : dshBorder),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x0A1B241F),
+              blurRadius: 16,
+              offset: Offset(0, 6),
+            ),
+          ],
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -301,8 +339,20 @@ class DshStatCard extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      Icon(icon, size: 15, color: highlighted ? dshAccent : dshInk3),
-                      const SizedBox(width: 8),
+                      Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          color: highlighted ? dshAccentSoft : dshSurface2,
+                          borderRadius: BorderRadius.circular(9),
+                        ),
+                        child: Icon(
+                          icon,
+                          size: 16,
+                          color: highlighted ? dshAccent : dshPrimary,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
                       Expanded(
                         child: Text(
                           label,
@@ -320,7 +370,7 @@ class DshStatCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: 22,
-                      height: 1.15,
+                      height: 1.2,
                       fontWeight: FontWeight.w700,
                       color: highlighted ? dshAccent : dshPrimary,
                       fontFeatures: const [FontFeature.tabularFigures()],
