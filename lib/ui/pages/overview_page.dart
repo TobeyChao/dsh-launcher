@@ -261,21 +261,25 @@ class _OverviewPageState extends State<OverviewPage> {
   Widget _buildAddr(String hint) {
     final running = _status == WebStatus.running ||
         _status == WebStatus.externalRunning;
-    return InkWell(
-      onTap: running ? _copyAddress : null,
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-        decoration: BoxDecoration(
-          color: running ? dshAccentSofter : dshSurface2,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: running ? dshAccent : dshBorder),
-        ),
-        child: Text(
-          widget.web.openUrl,
-          style: dshMono.copyWith(
-            fontSize: 13,
-            color: running ? dshAccentHover : dshInk2,
+    return Flexible(
+      child: InkWell(
+        onTap: running ? _copyAddress : null,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          decoration: BoxDecoration(
+            color: running ? dshAccentSofter : dshSurface2,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: running ? dshAccent : dshBorder),
+          ),
+          child: Text(
+            widget.web.openUrl,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: dshMono.copyWith(
+              fontSize: 13,
+              color: running ? dshAccentHover : dshInk2,
+            ),
           ),
         ),
       ),
