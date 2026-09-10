@@ -228,9 +228,7 @@ class _UpgradeViewState extends State<UpgradeView> {
           const SizedBox(width: 10),
           DshButton.accent('重试', onPressed: upg.retry),
         ] else if (upg.phase == UpgradePhase.done) ...[
-          DshButton.ghost('关闭', onPressed: () => Navigator.of(context).pop()),
-          const SizedBox(width: 10),
-          const DshButton.accent('升级完成', onPressed: null),
+          DshButton.accent('升级完成', onPressed: () => Navigator.of(context).pop()),
         ] else ...[
           DshButton.ghost('关闭', onPressed: () => Navigator.of(context).pop()),
         ],

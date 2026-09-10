@@ -8,6 +8,7 @@ import 'package:dsh_launcher/services/upgrade_service.dart';
 import 'package:dsh_launcher/services/web_service.dart';
 import 'package:dsh_launcher/ui/launcher_screen.dart';
 import 'package:dsh_launcher/ui/pages/settings_page.dart';
+import 'package:dsh_launcher/ui/upgrade_view.dart';
 import 'package:flutter/material.dart' hide StepState;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -207,6 +208,25 @@ void main() {
       expect(web.upgradeLocked, isFalse);
     });
 
+    test('升级成功后刷新更新态:不再显示有更新', () async {
+      final settings = SettingsStore()..repoPath = tempRepo();
+      final web = WebService(settings: settings);
+      final upgrade = makeService(settings, web);
+      await upgrade.checkForUpdates();
+      expect(upgrade.updateAvailable, isTrue);
+      expect(upgrade.aheadCount, 3);
+
+      upgrade.beginUpgrade();
+      await _waitFor(() => upgrade.phase == UpgradePhase.done);
+
+      expect(upgrade.aheadCount, 0);
+      expect(
+        upgrade.updateAvailable,
+        isFalse,
+        reason: '升级完成后应刷新为已是最新,不能继续显示有更新',
+      );
+    });
+
     test('失败停在步骤,重试从失败步续跑', () async {
       final settings = SettingsStore()..repoPath = tempRepo();
       final web = WebService(settings: settings);
@@ -303,6 +323,43 @@ void main() {
       await tester.pump();
       expect(find.text('概览'), findsWidgets);
       expect(find.text('DSH Launcher'), findsOneWidget);
+    });
+  });
+
+  group('升级视图', () {
+    testWidgets('升级完成后「升级完成」按钮可点击返回', (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      final settings = SettingsStore()..repoPath = tempRepo();
+      await settings.load();
+      final web = WebService(settings: settings);
+      final upgrade = UpgradeService(settings: settings, web: web)
+        ..phase = UpgradePhase.done;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Builder(
+            builder: (context) => Scaffold(
+              body: Center(
+                child: ElevatedButton(
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => UpgradeView(upgrade: upgrade),
+                    ),
+                  ),
+                  child: const Text('打开升级视图'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('打开升级视图'));
+      await tester.pumpAndSettle();
+      expect(find.text('升级完成'), findsOneWidget);
+
+      await tester.tap(find.text('升级完成'));
+      await tester.pumpAndSettle();
+      expect(find.text('升级完成'), findsNothing);
     });
   });
 }

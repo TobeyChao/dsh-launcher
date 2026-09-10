@@ -186,6 +186,14 @@ class UpgradeService extends ChangeNotifier {
     // 全部成功
     _append(LogLevel.info, '升级完成:${_headLabel()} → ${_newHead ?? '?'}', LogSource.sys);
     phase = UpgradePhase.done;
+    // 本地刷新版本与更新态:git pull 后 HEAD 已推进到远端,不再有可更新提交。
+    // 否则概览页会一直停在旧 HEAD 与「有更新」,直到重启重新检查。
+    if (_newHead != null) {
+      currentHead = _newHead;
+      targetHead = _newHead;
+      aheadCount = 0;
+      checkState = CheckState.ok;
+    }
     // 先解锁再恢复服务:restart() 在锁定态会直接返回,必须在调用前释放锁,
     // 否则升级完成但服务无法自动重启;同时避免重启/开浏览器期间长期锁住。
     web.setUpgradeLocked(false);
