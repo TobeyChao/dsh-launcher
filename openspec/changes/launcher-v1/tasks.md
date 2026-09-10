@@ -2,7 +2,7 @@
 
 ## 1. 工程脚手架
 
-- [x] 1.1 在 `D:\projects\dsh-launcher` 执行 `flutter create . --project-name dsh_launcher --platforms windows` 并核对窗口工程生成 — verify: `flutter build windows` 无错误,`lib/main.dart` 存在
+- [x] 1.1 在本仓库目录执行 `flutter create . --project-name dsh_launcher --platforms windows` 并核对窗口工程生成 — verify: `flutter build windows` 无错误,`lib/main.dart` 存在
 - [x] 1.2 添加依赖 `tray_manager` `launch_at_startup` `window_manager` `shared_preferences` `file_selector` `url_launcher` `win32_registry`(与 ct-tool 同版本区间) — verify: `flutter pub get` 成功且 `pubspec.lock` 更新
 - [x] 1.3 配置 `.gitignore`(排除 `build/`、`.dart_tool/`、`openspec/changes/*/` 之外的运行产物)与 `assets/icons/` 托盘/应用图标 — verify: `git status` 不显示构建产物,图标资源可被 `flutter build` 打包
 - [x] 1.4 编写 `tool/build_windows.ps1`(仿 ct-tool,无 runtime 嵌入:预检 Flutter/VS 环境 → `flutter build windows --release` → 输出 Release 目录路径) — verify: 脚本执行成功并产出 `build\windows\x64\runner\Release\`
@@ -15,7 +15,7 @@
 
 ## 3. 设置与持久化
 
-- [x] 3.1 实现 `settings_store.dart`:键 `repo_path`/`port`/`dev_mode`/`auto_start`/`tray_resident`,默认值(仓库默认 `D:\projects\deepseek-harness` 存在才生效,port 3080,dev 关,自启关,托盘常驻开) — verify: 单元测试覆盖默认与读写持久化
+- [x] 3.1 实现 `settings_store.dart`:键 `repo_path`/`port`/`dev_mode`/`auto_start`/`tray_resident`,默认值(仓库默认探测用户主目录下的常见位置,存在才生效;port 3080,dev 关,自启关,托盘常驻开) — verify: 单元测试覆盖默认与读写持久化
 - [x] 3.2 实现 repo 路径校验(存在 `.git`)与无效时 UI 禁启动提示 — verify: 单元测试 + 设置页填入不存在路径时概览页启动按钮禁用并提示
 
 ## 4. 服务编排

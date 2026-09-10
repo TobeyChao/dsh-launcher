@@ -26,8 +26,9 @@ void main() {
     Directory('${repo.path}${Platform.pathSeparator}.git').createSync();
 
     SharedPreferences.setMockInitialValues({});
-    final settings = SettingsStore()..repoPath = repo.path;
+    final settings = SettingsStore();
     await settings.load();
+    settings.repoPath = repo.path;
     final web = WebService(settings: settings)..status = WebStatus.running;
     final upgrade = UpgradeService(settings: settings, web: web)
       ..runner = (cmd, args, cwd) async => ProcessResult(0, 0, '', '');

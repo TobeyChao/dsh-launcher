@@ -15,7 +15,11 @@ import 'package:flutter_test/flutter_test.dart';
 /// 本测试启动的 dsh web(上一次运行遗留),先清理再跑;不换端口绕开。
 /// 需要本机有 dsh checkout + pnpm。
 void main() {
-  const repo = r'D:\projects\deepseek-harness';
+  // 仓库位置从环境变量读取,默认取用户主目录下的常见 checkout,避免写死机器路径。
+  final home =
+      Platform.environment['USERPROFILE'] ?? Platform.environment['HOME'] ?? '';
+  final repo = Platform.environment['DSH_E2E_REPO'] ??
+      '$home${Platform.pathSeparator}Proj${Platform.pathSeparator}deepseek-harness';
   const port = 3180;
 
   test(

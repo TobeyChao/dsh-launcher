@@ -8,9 +8,9 @@ DSH 桌面端(Electron,`deepseek-harness/apps/desktop`)停用。用户决定:Web
 
 | 路径 | 大小 | 说明 |
 |---|---|---|
-| `D:\projects\deepseek-harness\apps\desktop\.desktop-build` | 1.1 GB | prepare 产物:离线 seed、desktop-host、win-unpacked(`DeepSeek Harness.exe`) |
-| `D:\projects\deepseek-harness\apps\desktop\electron-builder.local.config.mjs` | - | 本地免签 electron-builder 配置(未跟踪) |
-| `D:\projects\deepseek-harness\upgrade-dsh-desktop.ps1` | - | 桌面端一键升级脚本(未跟踪) |
+| `<dsh-checkout>\apps\desktop\.desktop-build` | 1.1 GB | prepare 产物:离线 seed、desktop-host、win-unpacked(`DeepSeek Harness.exe`) |
+| `<dsh-checkout>\apps\desktop\electron-builder.local.config.mjs` | - | 本地免签 electron-builder 配置(未跟踪) |
+| `<dsh-checkout>\upgrade-dsh-desktop.ps1` | - | 桌面端一键升级脚本(未跟踪) |
 | `%USERPROFILE%\.dsh\profiles\desktop` | ~565 MB | 桌面端 profile(npm project + node_modules) |
 | `%USERPROFILE%\.dsh\desktop` | - | 桌面端 pnpm store |
 | `apps\desktop\node_modules\electron` | 367 MB | 手动经 `ELECTRON_MIRROR` 下载的 electron 二进制 |

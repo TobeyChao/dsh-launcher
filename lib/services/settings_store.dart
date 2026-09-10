@@ -20,11 +20,22 @@ class SettingsStore extends ChangeNotifier {
   bool _loaded = false;
 
   /// 开发期默认值探测:常见位置存在 .git 才采用,否则留空由用户配置。
+  /// 依次尝试 `$DSH_HARNESS_PATH`,以及当前用户主目录下的常见 checkout 位置;
+  /// 不写死任何机器的绝对路径。
   static String inferDefaultRepo() {
-    for (final candidate in const [
-      r'D:\projects\deepseek-harness',
-      r'D:\projects\deepseek-harness',
-      r'D:\projects\deepseek-harness',
+    final override = Platform.environment['DSH_HARNESS_PATH']?.trim();
+    if (override != null && override.isNotEmpty) {
+      if (Directory('$override/.git').existsSync()) return override;
+    }
+    final home = Platform.environment['USERPROFILE'] ??
+        Platform.environment['HOME'] ??
+        '';
+    if (home.isEmpty) return '';
+    final sep = Platform.pathSeparator;
+    for (final candidate in [
+      '$home${sep}Proj${sep}deepseek-harness',
+      '$home${sep}deepseek-harness',
+      '$home${sep}source${sep}deepseek-harness',
     ]) {
       if (Directory('$candidate/.git').existsSync()) return candidate;
     }

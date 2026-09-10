@@ -12,7 +12,7 @@
 - **检查更新 + 一键升级**: `git fetch` 比较 HEAD 与远端;升级视图五步(预检 → `git pull --ff-only` → `pnpm install` → `pnpm run build`(含前端 vite)→ 重启服务),逐步状态 + 实时日志,失败可查可重试。纯 Dart 实现,不依赖任何 PowerShell 脚本。
 - **桌面壳**: 系统托盘(打开界面/重启/停止/显示/退出)、单实例锁、开机自启、关闭窗口行为(最小化到托盘或退出)。
 - 仓库 `tool/build_windows.ps1` 构建脚本(`flutter build windows --release`,无运行时嵌入)。
-- 依赖关系: 引用现有 DSH checkout(默认 `D:\projects\deepseek-harness`),需要机器上 node + pnpm;不修改 DSH 仓库任何文件。
+- 依赖关系: 引用现有 DSH checkout(默认探测用户主目录下的常见位置),需要机器上 node + pnpm;不修改 DSH 仓库任何文件。
 
 ## Capabilities
 
@@ -28,7 +28,7 @@
 
 ## Impact
 
-- 新仓库 `D:\projects\dsh-launcher`(本地 git,暂不推送远程)。
+- 新仓库 `<本仓库>`(本地 git)。
 - Flutter 依赖与 ct-tool launcher 相同梯队:`tray_manager`、`launch_at_startup`、`window_manager`、`shared_preferences`、`file_selector`、`url_launcher`、`win32_registry`。
 - 外部依赖: 现有 dsh checkout、系统 node/pnpm、网络(git fetch、pnpm install)。
 - 不触碰:`deepseek-harness` 仓库跟踪文件与 `~/.dsh` 共享数据(启动器只读展示数据目录)。桌面端(Electron)本地产物已退役删除,恢复方式见 `docs/desktop-retirement.md`。

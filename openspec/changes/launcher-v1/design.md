@@ -4,8 +4,8 @@
 
 动机与范围见 proposal.md。本设计只回答 HOW。约束前提:
 
-- 目标机器就是这台开发机:已有 Node 22 + pnpm 11 + Flutter SDK(`D:\projects\FlutterSdk\flutter`),DSH checkout 在 `D:\projects\deepseek-harness`,日常以源码方式(`pnpm dsh web`)跑 Web UI。
-- 参考实现 `D:\projects\ct-tool\launcher` 已验证全部桌面依赖(tray_manager/launch_at_startup/window_manager/shared_preferences/file_selector/url_launcher/win32_registry)在本机可用,且已有"先 mockup 后实现"的协作流程与主题令牌。
+- 目标机器为一台 Windows 开发机:已有 Node 22 + pnpm 11 + Flutter SDK,DSH checkout 在本地(如 `<dsh-checkout>`),日常以源码方式(`pnpm dsh web`)跑 Web UI。
+- 参考实现 `<参考 launcher 目录>` 已验证全部桌面依赖(tray_manager/launch_at_startup/window_manager/shared_preferences/file_selector/url_launcher/win32_registry)在 Windows 上可用,且已有"先 mockup 后实现"的协作流程与主题令牌。
 
 ## Goals / Non-Goals
 
@@ -98,7 +98,7 @@ UpgradeService(ChangeNotifier)
 ### D8. 设置与持久化
 
 shared_preferences 键: `repo_path` / `port` / `dev_mode` / `auto_start` / `tray_resident`。
-- 默认: repo 路径探索 `D:\projects\deepseek-harness`(存在才生效),port 3080,dev_mode 关,auto_start 关,tray_resident 开。
+- 默认: repo 路径探索用户主目录下的常见位置(存在才生效;也可用 `DSH_HARNESS_PATH` 指定),port 3080,dev_mode 关,auto_start 关,tray_resident 开。
 - 设置修改即时生效(下次启动服务时使用);repo 路径校验 `.git` 存在,无效时概览页提示且禁启动。
 
 ## Module Map

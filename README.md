@@ -21,7 +21,7 @@ DeepSeek Harness Web UI 桌面启动器(Windows):把 `pnpm dsh web`(可选 `dev:
 
 ## 使用
 
-双击 `dsh_launcher.exe`。首次使用在「设置」页选择 dsh checkout 路径(含 `.git`,默认自动探测 `D:\projects\deepseek-harness`),端口默认 3080。
+双击 `dsh_launcher.exe`。首次使用在「设置」页选择 dsh checkout 路径(含 `.git`,默认自动探测用户主目录下的常见位置,也可用环境变量 `DSH_HARNESS_PATH` 指定),端口默认 3080。
 
 - 概览页大开关启动服务;就绪后浏览器自动打开;
 - 「升级」:概览页更新卡 → 检查更新 → 升级视图确认;流程失败可停在步骤查看输出并重试;

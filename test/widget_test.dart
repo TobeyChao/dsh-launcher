@@ -290,8 +290,9 @@ void main() {
 
     testWidgets('服务运行中:仓库/端口禁用并提示', (tester) async {
       SharedPreferences.setMockInitialValues({});
-      final settings = SettingsStore()..repoPath = tempRepo();
+      final settings = SettingsStore();
       await settings.load();
+      settings.repoPath = tempRepo();
       final web = WebService(settings: settings)..status = WebStatus.running;
 
       await tester.pumpWidget(
@@ -309,8 +310,9 @@ void main() {
 
     testWidgets('启动器主屏构建冒烟', (tester) async {
       SharedPreferences.setMockInitialValues({});
-      final settings = SettingsStore()..repoPath = tempRepo();
+      final settings = SettingsStore();
       await settings.load();
+      settings.repoPath = tempRepo();
       final web = WebService(settings: settings);
       final upgrade = UpgradeService(settings: settings, web: web)
         ..runner = (cmd, args, cwd) async => ProcessResult(0, 0, '', '');
@@ -329,8 +331,9 @@ void main() {
   group('升级视图', () {
     testWidgets('升级完成后「升级完成」按钮可点击返回', (tester) async {
       SharedPreferences.setMockInitialValues({});
-      final settings = SettingsStore()..repoPath = tempRepo();
+      final settings = SettingsStore();
       await settings.load();
+      settings.repoPath = tempRepo();
       final web = WebService(settings: settings);
       final upgrade = UpgradeService(settings: settings, web: web)
         ..phase = UpgradePhase.done;
