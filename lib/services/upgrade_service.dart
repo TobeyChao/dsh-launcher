@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 
 import '../models/log_entry.dart';
 import 'settings_store.dart';
+import 'desktop_process.dart';
 import 'web_service.dart';
 
 enum UpgradePhase { idle, checking, ready, running, done, failed }
@@ -272,7 +273,7 @@ class UpgradeService extends ChangeNotifier {
     if (run != null) {
       return run(executable, args, (line) => _append(LogLevel.info, line, LogSource.upg));
     }
-    final env = Map<String, String>.from(Platform.environment);
+    final env = Map<String, String>.from(DesktopProcess.environment);
     env['NO_COLOR'] = '1';
     env['TERM'] = 'dumb';
     env['GIT_TERMINAL_PROMPT'] = '0';
@@ -305,7 +306,7 @@ class UpgradeService extends ChangeNotifier {
   Future<ProcessResult> _run(String command, List<String> args) async {
     final injected = runner;
     if (injected != null) return injected(command, args, settings.repoPath);
-    final env = Map<String, String>.from(Platform.environment);
+    final env = Map<String, String>.from(DesktopProcess.environment);
     env['GIT_TERMINAL_PROMPT'] = '0';
     return Process.run(
       command,
@@ -320,17 +321,7 @@ class UpgradeService extends ChangeNotifier {
 
   String get headShort => currentHead ?? '';
 
-  static Future<void> _killTree(int pid) async {
-    try {
-      if (Platform.isWindows) {
-        await Process.run('taskkill', ['/F', '/T', '/PID', '$pid']);
-      } else {
-        await Process.run('kill', ['-KILL', '$pid']);
-      }
-    } catch (_) {
-      // 已退出等情况忽略。
-    }
-  }
+  static Future<void> _killTree(int pid) => DesktopProcess.killTree(pid);
 
   void _append(LogLevel level, String message, LogSource source) {
     logs.add(LogEntry(level, message, source: source));

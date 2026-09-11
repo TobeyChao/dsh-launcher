@@ -45,8 +45,8 @@ class _LauncherAppState extends State<LauncherApp> with WindowListener {
     // 拦截系统退出请求:先停子进程再退出,避免孤儿进程。
     _lifecycleListener = AppLifecycleListener(
       onExitRequested: () async {
-        // 托盘常驻:关闭/退出请求应隐藏到托盘,绝不能停服务。
-        if (widget.settings.trayResident) {
+        // macOS 的 Cmd+Q 是明确退出;窗口关闭由 onWindowClose 处理。
+        if (widget.settings.trayResident && !Platform.isMacOS) {
           await _hideToTray();
           return AppExitResponse.cancel;
         }

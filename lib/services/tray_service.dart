@@ -27,7 +27,11 @@ class TrayService with TrayListener {
     trayManager.addListener(this);
     try {
       await trayManager.setIcon(
-        Platform.isWindows ? 'assets/icons/tray_icon.ico' : 'assets/icons/tray_icon.png',
+        Platform.isWindows
+            ? 'assets/icons/tray_icon.ico'
+            : (Platform.isMacOS
+                ? 'assets/icons/tray_icon_template.png'
+                : 'assets/icons/tray_icon.png'),
         isTemplate: Platform.isMacOS,
       );
       await trayManager.setToolTip('DSH Launcher');

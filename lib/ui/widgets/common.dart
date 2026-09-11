@@ -96,7 +96,7 @@ InputDecoration dshInputDecoration() {
   );
 }
 
-/// 品牌标志(深蓝圆角方块 + DS 字标)。
+/// 与两个平台的应用图标共用 DeepSeek Harness 品牌资源。
 class DshBrandMark extends StatelessWidget {
   const DshBrandMark({super.key, this.size = 24});
 
@@ -104,36 +104,12 @@ class DshBrandMark extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return Image.asset(
+      'assets/icons/app_icon.png',
       width: size,
       height: size,
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF4A6BE8), dshPrimary],
-        ),
-        borderRadius: BorderRadius.circular(size * 0.28),
-        border: Border.all(color: Color(0x2EFFFFFF), width: 0.5),
-        boxShadow: [
-          BoxShadow(
-            color: dshPrimary.withValues(alpha: 0.3),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      alignment: Alignment.center,
-      child: Text(
-        'DS',
-        style: TextStyle(
-          fontFamily: 'Cascadia Mono',
-          color: Colors.white,
-          fontSize: size * 0.46,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 0.5,
-        ),
-      ),
+      filterQuality: FilterQuality.medium,
+      excludeFromSemantics: true,
     );
   }
 }

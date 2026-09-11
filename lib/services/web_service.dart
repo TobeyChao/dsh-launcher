@@ -7,6 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../models/log_entry.dart';
 import 'settings_store.dart';
+import 'desktop_process.dart';
 
 enum WebStatus { stopped, starting, running, failed, externalRunning }
 
@@ -65,7 +66,7 @@ class WebService extends ChangeNotifier {
 
   /// 从 PATH 中解析 pnpm 可执行文件(Windows 为 `pnpm.cmd`);找不到返回 null。
   static String? resolvePnpm({String? envPath}) {
-    final path = envPath ?? Platform.environment['PATH'] ?? '';
+    final path = envPath ?? DesktopProcess.environment['PATH'] ?? '';
     final sep = Platform.isWindows ? ';' : ':';
     final names = Platform.isWindows
         ? const ['pnpm.cmd', 'pnpm.exe', 'pnpm']
@@ -311,7 +312,7 @@ class WebService extends ChangeNotifier {
   }
 
   Map<String, String> _childEnvironment() {
-    final env = Map<String, String>.from(Platform.environment);
+    final env = Map<String, String>.from(DesktopProcess.environment);
     // 日志面板不解析控制字符,gits/pnpm 挂起时快速返回。
     env['NO_COLOR'] = '1';
     env['TERM'] = 'dumb';
@@ -513,6 +514,7 @@ class WebService extends ChangeNotifier {
   /// 找到监听本端口的进程 PID(netstat 解析);未找到返回 null。
   Future<int?> _listenerPid(int port) async {
     try {
+      if (!Platform.isWindows) return null;
       final result = await Process.run('netstat', ['-ano', '-p', 'tcp']);
       final pattern =
           RegExp('127\\.0\\.0\\.1:$port\\s+\\S+\\s+LISTENING\\s+(\\d+)');
@@ -565,18 +567,8 @@ class WebService extends ChangeNotifier {
     );
   }
 
-  /// Windows 进程树终结(taskkill /T);其他平台 kill -KILL。
-  static Future<void> _killTree(int pid) async {
-    try {
-      if (Platform.isWindows) {
-        await Process.run('taskkill', ['/F', '/T', '/PID', '$pid']);
-      } else {
-        await Process.run('kill', ['-KILL', '$pid']);
-      }
-    } catch (_) {
-      // 进程已退出等情况直接忽略。
-    }
-  }
+  /// 按平台终结完整进程树。
+  static Future<void> _killTree(int pid) => DesktopProcess.killTree(pid);
 
   void _fail(String reason) {
     failureReason = reason;

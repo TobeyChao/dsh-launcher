@@ -24,14 +24,14 @@ void main() {
       final home = WebService.resolveDshHome(
         env: {'USERPROFILE': r'C:\Users\me'},
       );
-      expect(home, r'C:\Users\me\.dsh');
+      expect(home, r'C:\Users\me' '${Platform.pathSeparator}.dsh');
     });
 
     test('空 DSH_HOME 视为未设置', () {
       final home = WebService.resolveDshHome(
         env: {'DSH_HOME': '   ', 'USERPROFILE': r'C:\Users\me'},
       );
-      expect(home, r'C:\Users\me\.dsh');
+      expect(home, r'C:\Users\me' '${Platform.pathSeparator}.dsh');
     });
 
     test('HOME 回退(非 Windows)', () {
@@ -43,7 +43,7 @@ void main() {
       final home = WebService.resolveDshHome(
         env: {'DSH_HOME': r'~\dsh-custom', 'USERPROFILE': r'C:\Users\me'},
       );
-      expect(home, r'C:\Users\me\dsh-custom');
+      expect(home, r'C:\Users\me' '${Platform.pathSeparator}dsh-custom');
     });
 
     test('无任何 home 时返回 null', () {

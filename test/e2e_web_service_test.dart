@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:dsh_launcher/services/settings_store.dart';
+import 'package:dsh_launcher/services/desktop_process.dart';
 import 'package:dsh_launcher/services/web_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -29,6 +30,7 @@ void main() {
         markTestSkipped('本机无 dsh checkout,跳过真实 E2E');
         return;
       }
+      await DesktopProcess.initialize();
       // dsh 的 Web 应用对同一 DSH_HOME 是单写者(~/.dsh/.credentials.yaml
       // 写锁,atomic-write 等待超时即失败);本机已有其他 dsh web 实例时
       // E2E 必须独占,明确跳过而非硬跑(非启动器缺陷,是 dsh 上游约束)。
@@ -99,14 +101,14 @@ Future<void> _preflightCleanup(int port, String repo) async {
   final commandLine = await _commandLine(pid);
   final isOurs = commandLine != null &&
       commandLine.contains('apps/cli/src/bin.ts') &&
-      commandLine.contains('"web"') &&
+      RegExp(r'\bweb\b').hasMatch(commandLine) &&
       commandLine.contains('--port') &&
       commandLine.contains('$port');
   if (!isOurs) {
     fail('端口 $port 被进程 $pid 占用(非本测试残留,不清理):$commandLine');
   }
   // 上一次运行遗留:先杀树再跑(根治,而不是换端口绕开)。
-  await Process.run('taskkill', ['/F', '/T', '/PID', '$pid']);
+  await DesktopProcess.killTree(pid);
   await Future<void>.delayed(const Duration(seconds: 1));
   if (await _portOpen(port)) {
     fail('清理上一次运行残留失败(端口 $port 仍被占用)');
@@ -116,6 +118,15 @@ Future<void> _preflightCleanup(int port, String repo) async {
 /// 查找已运行的其他 dsh web 实例(node bin.ts "web")的 PID;无则返回 null。
 Future<int?> _findOtherDshWeb() async {
   try {
+    if (!Platform.isWindows) {
+      final result = await Process.run('/bin/ps', ['-axo', 'pid=,command=']);
+      for (final line in result.stdout.toString().split('\n')) {
+        if (line.contains('bin.ts') && RegExp(r'\bweb\b').hasMatch(line)) {
+          return int.tryParse(line.trim().split(RegExp(r'\s+')).first);
+        }
+      }
+      return null;
+    }
     final result = await Process.run('wmic',
         ['process', 'where', "name='node.exe'", 'get', 'processid,commandline', '/value']);
     if (result.exitCode != 0) return null;
@@ -134,6 +145,11 @@ Future<int?> _findOtherDshWeb() async {
 }
 
 Future<int?> _listenerPid(int port) async {
+  if (!Platform.isWindows) {
+    final result = await Process.run('/usr/sbin/lsof',
+        ['-nP', '-tiTCP:$port', '-sTCP:LISTEN']);
+    return int.tryParse(result.stdout.toString().trim().split('\n').first);
+  }
   final result = await Process.run('netstat', ['-ano', '-p', 'tcp']);
   final pattern =
       RegExp('127\\.0\\.0\\.1:$port\\s+\\S+\\s+LISTENING\\s+(\\d+)');
@@ -146,6 +162,10 @@ Future<int?> _listenerPid(int port) async {
 
 Future<String?> _commandLine(int pid) async {
   try {
+    if (!Platform.isWindows) {
+      final result = await Process.run('/bin/ps', ['-p', '$pid', '-o', 'command=']);
+      return result.exitCode == 0 ? result.stdout.toString() : null;
+    }
     final result = await Process.run(
         'wmic', ['process', 'where', 'processid=$pid', 'get', 'commandline', '/value']);
     if (result.exitCode != 0) return null;

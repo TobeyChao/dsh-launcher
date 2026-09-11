@@ -29,6 +29,10 @@ class AutoLaunch {
     if (kDebugMode) return;
     if (await isEnabled == enabled) return;
     if (enabled) {
+      if (Platform.isMacOS) {
+        await Directory('${Platform.environment['HOME']}/Library/LaunchAgents')
+            .create(recursive: true);
+      }
       await _launcher.enable();
     } else {
       await _launcher.disable();
